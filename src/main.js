@@ -503,7 +503,7 @@ function tick(dt) {
       sendT = 1 / 15;
       const out = [];
       for (const r of riders) if (r.active && mine(r)) out.push(pack(r));
-      if (out.length) net.send({ t: 's', r: out });
+      if (out.length) net.send({ t: 's', ts: net.now(), r: out });
     }
     if (resultsT > 0 && (resultsT -= dt) <= 0) showResults();
     if (screen === 'results' && (resultsRefresh -= dt) <= 0) { resultsRefresh = 0.5; renderResults(); }
@@ -684,10 +684,12 @@ const net = new Net({
   ev(m) { if (raceLive && m && typeof m.e === 'string') powerups.onEvent(m, clock); },
   state(m) {
     if (!raceLive || !Array.isArray(m.r)) return;
+    // how long the update spent in transit (both ends share the server's clock), so riders are drawn where they are now
+    const transit = typeof m.ts === 'number' ? clamp(net.now() - m.ts, 0, 400) : 0;
     for (const a of m.r) {
       const r = riders[a[0]];
       if (!r || !r.active || mine(r)) continue;
-      r.net = { z: a[1], lat: a[2], v: a[3], steer: a[4], push: a[5], flags: a[6], health: a[7], atk: a[8], atkT: a[9], ft: a[10], crashDir: a[11], steerVel: a[12], at: performance.now() };
+      r.net = { z: a[1], lat: a[2], v: a[3], steer: a[4], push: a[5], flags: a[6], health: a[7], atk: a[8], atkT: a[9], ft: a[10], crashDir: a[11], steerVel: a[12], at: performance.now() - transit };
     }
   },
   hit(m) { const r = riders[m.to]; if (raceLive && r && r.active && mine(r)) applyHit(r, m.side > 0 ? 1 : -1, HITS[m.kind] ? m.kind : 'punch'); },
