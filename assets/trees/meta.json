@@ -1,0 +1,26 @@
+{
+ "fir_0": {
+  "aspect": 0.655
+ },
+ "fir_1": {
+  "aspect": 0.657
+ },
+ "fir_2": {
+  "aspect": 0.827
+ },
+ "pine_0": {
+  "aspect": 0.599
+ },
+ "pine_1": {
+  "aspect": 0.5
+ },
+ "pine_2": {
+  "aspect": 0.525
+ },
+ "leaf_0": {
+  "aspect": 1.234
+ },
+ "leaf_1": {
+  "aspect": 1.195
+ }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "blacktop-brawl",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Combat motorcycle racing in the browser, solo or online",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.18.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blacktop Brawl</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #0b0c0e; overflow: hidden; color: #fff;
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif; user-select: none; }
+  canvas#game { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  #vignette, #flash { position: fixed; inset: 0; pointer-events: none; }
+  #vignette { background: radial-gradient(ellipse at center, transparent 70%, rgba(0,0,0,.2) 100%); }
+  #flash { background: radial-gradient(ellipse at center, transparent 35%, rgba(200,0,0,.75) 100%); opacity: 0; }
+  #hud { position: fixed; inset: 0; pointer-events: none; text-shadow: 0 2px 6px rgba(0,0,0,.7); }
+  .hidden { display: none !important; }
+  .panel { position: absolute; }
+  .label { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; opacity: .75; }
+  .bar { height: 10px; background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.35); transform: skewX(-18deg); overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 100%; background: linear-gradient(90deg, #e2382d, #f5b82e 55%, #6fd13c); }
+  #tl { left: 26px; top: 20px; width: 240px; }
+  #tl .bar { margin: 5px 0 12px 4px; }
+  #rival { opacity: 0; transition: opacity .2s; }
+  #rival .bar > i { background: #e2382d; }
+  #tr { right: 26px; top: 16px; text-align: right; }
+  #pos { font-size: 54px; font-weight: 800; font-style: italic; line-height: 1; }
+  #pos small { font-size: 20px; opacity: .8; font-weight: 600; }
+  #time { font-size: 20px; font-variant-numeric: tabular-nums; margin-top: 4px; }
+  #br { right: 30px; bottom: 22px; text-align: right; }
+  #speed { font-size: 84px; font-weight: 800; font-style: italic; line-height: .9; font-variant-numeric: tabular-nums; }
+  #gear { font-size: 22px; font-weight: 700; opacity: .9; }
+  #progress { left: 50%; top: 22px; width: 36vw; margin-left: -18vw; }
+  #progress .bar > i { background: #fff; width: 0; }
+  #toast { left: 0; right: 0; top: 24%; text-align: center; font-size: 44px; font-weight: 800; font-style: italic;
+    letter-spacing: .04em; opacity: 0; transition: opacity .25s; }
+  #count { left: 0; right: 0; top: 30%; text-align: center; font-size: 150px; font-weight: 900; font-style: italic; }
+
+  #overlay { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: linear-gradient(rgba(0,0,0,.3), rgba(0,0,0,.78)); text-align: center; padding: 16px; overflow-y: auto; }
+  #overlay h1 { font-size: clamp(34px, 6vw, 76px); margin: 0; font-style: italic; font-weight: 900; letter-spacing: -.01em;
+    text-shadow: 0 6px 0 #b3121d, 0 12px 30px rgba(0,0,0,.8); }
+  #overlay h2 { font-weight: 500; font-size: 18px; opacity: .92; margin: 6px 0 12px; }
+  .screen { display: flex; flex-direction: column; align-items: center; gap: 9px; }
+  .row { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; }
+  input { font: 600 17px inherit; font-family: inherit; color: #fff; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.45);
+    border-radius: 6px; padding: 9px 12px; width: 150px; text-align: center; user-select: text; }
+  input#room { text-transform: uppercase; width: 110px; letter-spacing: .15em; }
+  input#shareLink { width: min(420px, 80vw); font-size: 14px; font-weight: 500; }
+  button { font: 700 17px inherit; font-family: inherit; color: #fff; background: #b3121d; border: 0; border-radius: 6px;
+    padding: 10px 22px; cursor: pointer; }
+  button:hover { background: #d21a27; }
+  button.ghost { background: rgba(255,255,255,.14); }
+  button.ghost:hover { background: rgba(255,255,255,.26); }
+  button:disabled { opacity: .45; cursor: default; }
+  .msg { min-height: 20px; font-size: 14px; color: #ffd166; max-width: 520px; }
+  table { border-collapse: collapse; font-size: 14px; margin: 6px auto 0; }
+  td { padding: 3px 12px; text-align: left; }
+  td:first-child { text-align: right; opacity: .8; }
+  kbd { display: inline-block; min-width: 14px; padding: 1px 6px; border: 1px solid rgba(255,255,255,.5); border-radius: 4px;
+    background: rgba(255,255,255,.1); font: 600 12px ui-monospace, Menlo, monospace; text-align: center; }
+  #playerList { list-style: none; padding: 0; margin: 4px 0; font-size: 18px; min-width: 220px; }
+  #playerList li { padding: 4px 0; border-bottom: 1px solid rgba(255,255,255,.15); }
+  #playerList small { opacity: .7; margin-left: 8px; }
+  #bar { width: 260px; height: 6px; background: rgba(255,255,255,.2); border-radius: 3px; overflow: hidden; }
+  #bar > i { display: block; height: 100%; width: 0; background: #fff; transition: width .2s; }
+  .cards { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .card { background: rgba(0,0,0,.45); border: 2px solid rgba(255,255,255,.25); border-radius: 8px; padding: 9px 14px; min-width: 150px;
+    max-width: 190px; font-weight: 600; text-align: left; }
+  .card:hover { background: rgba(255,255,255,.12); }
+  .card.sel { border-color: #ffd166; background: rgba(255,209,102,.14); }
+  .card b { display: block; font-size: 17px; }
+  .card small { display: block; font-weight: 400; font-size: 12px; opacity: .85; margin: 2px 0 6px; min-height: 28px; }
+  .stat { display: grid; grid-template-columns: 62px 1fr; align-items: center; font-size: 10px; letter-spacing: .08em; text-transform: uppercase; opacity: .9; }
+  .stat i { display: block; height: 5px; background: rgba(255,255,255,.2); border-radius: 3px; overflow: hidden; }
+  .stat i u { display: block; height: 100%; background: #ffd166; }
+  #minimap { position: absolute; left: 22px; bottom: 22px; width: 190px; height: 190px; }
+  #items { left: 50%; bottom: 22px; transform: translateX(-50%); display: flex; gap: 10px; align-items: flex-end; }
+  .slot { min-width: 104px; padding: 7px 10px; text-align: center; font-weight: 800; font-style: italic; font-size: 19px;
+    background: rgba(0,0,0,.45); border: 2px solid rgba(255,255,255,.3); border-radius: 6px; }
+  .slot.next { border-color: #ffd166; }
+  .slot small { display: block; font: 600 10px inherit; font-style: normal; letter-spacing: .12em; opacity: .7; }
+  #btnPause { top: 46px; left: 50%; transform: translateX(-50%); pointer-events: auto; font-size: 13px; padding: 5px 14px;
+    background: rgba(0,0,0,.45); border: 1px solid rgba(255,255,255,.35); text-shadow: none; }
+  #btnPause:hover { background: rgba(0,0,0,.7); }
+  #scr-pause button { min-width: 260px; }
+  #err { position: fixed; left: 12px; bottom: 12px; color: #ff8a80; font: 13px ui-monospace, monospace; white-space: pre-wrap; }
+</style>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js", "three/addons/": "./vendor/addons/" } }
+</script>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="vignette"></div>
+<div id="flash"></div>
+
+<div id="hud" class="hidden">
+  <div class="panel" id="tl">
+    <div class="label">Rider</div>
+    <div class="bar"><i id="health"></i></div>
+    <div id="rival">
+      <div class="label" id="rivalName">Rival</div>
+      <div class="bar"><i id="rivalHealth"></i></div>
+    </div>
+  </div>
+  <div class="panel" id="progress"><div class="bar"><i id="prog"></i></div></div>
+  <div class="panel" id="tr">
+    <div id="pos">1<small>/10</small></div>
+    <div id="time">0:00.0</div>
+  </div>
+  <div class="panel" id="br">
+    <div id="gear">N</div>
+    <div id="speed">0</div>
+    <div class="label">km/h</div>
+  </div>
+  <canvas class="panel" id="minimap" width="380" height="380"></canvas>
+  <div class="panel" id="items">
+    <div class="slot next"><small>SPACE</small><span id="item0">—</span></div>
+    <div class="slot"><small>SHIFT swaps</small><span id="item1">—</span></div>
+  </div>
+  <button class="panel" id="btnPause">❚❚ Menu (Esc)</button>
+  <div class="panel" id="toast"></div>
+  <div class="panel" id="count"></div>
+</div>
+
+<div id="overlay">
+  <h1>BLACKTOP BRAWL</h1>
+  <h2 id="sub">Six kilometres of open highway. Ten riders. No rules.</h2>
+
+  <div class="screen" id="scr-load">
+    <div id="bar"><i id="barFill"></i></div>
+    <div class="label">Loading the highway…</div>
+  </div>
+
+  <div class="screen hidden" id="scr-menu">
+    <div class="label">Location</div>
+    <div class="cards" id="locPick"></div>
+    <div class="label">Bike</div>
+    <div class="cards" id="bikePick"></div>
+    <div class="row"><span class="label">Your name</span><input id="name" maxlength="14" autocomplete="off"></div>
+    <div class="row">
+      <button id="btnSolo">Solo race</button>
+      <span class="label">or</span>
+      <input id="room" maxlength="8" placeholder="ROOM" autocomplete="off">
+      <button id="btnOnline">Play online</button>
+    </div>
+    <div class="msg" id="menuMsg"></div>
+    <table>
+      <tr><td>Throttle / brake</td><td><kbd>↑</kbd> <kbd>↓</kbd> or <kbd>W</kbd> <kbd>S</kbd></td></tr>
+      <tr><td>Steer</td><td><kbd>←</kbd> <kbd>→</kbd> or <kbd>A</kbd> <kbd>D</kbd></td></tr>
+      <tr><td>Punch left / right</td><td><kbd>Z</kbd> <kbd>C</kbd> or <kbd>J</kbd> <kbd>L</kbd></td></tr>
+      <tr><td>Kick</td><td><kbd>X</kbd> or <kbd>K</kbd></td></tr>
+      <tr><td>Use power-up / swap the two you hold</td><td><kbd>Space</kbd> / <kbd>Shift</kbd></td></tr>
+      <tr><td>Menu / pause · mute · restart (solo)</td><td><kbd>Esc</kbd> <kbd>M</kbd> <kbd>R</kbd></td></tr>
+      <tr><td>Graphics quality (low / medium / high)</td><td><kbd>G</kbd></td></tr>
+    </table>
+  </div>
+
+  <div class="screen hidden" id="scr-lobby">
+    <div class="row"><span class="label">Room</span><b id="roomCode" style="font-size:26px;letter-spacing:.15em"></b></div>
+    <div class="row"><span class="label">Invite link</span><input id="shareLink" readonly><button class="ghost" id="btnCopy">Copy</button></div>
+    <div class="row"><span class="label">Location</span><b id="lobbyLoc"></b><button class="ghost" id="btnLoc">Change</button></div>
+    <ul id="playerList"></ul>
+    <div class="msg" id="lobbyMsg"></div>
+    <div class="row"><button id="btnStart">Start race</button><button class="ghost" id="btnLeave">Leave room</button></div>
+  </div>
+
+  <div class="screen hidden" id="scr-pause">
+    <button id="btnResume">Resume</button>
+    <button class="ghost" id="btnRestart">Restart race</button>
+    <button class="ghost" id="btnGfx">Graphics: medium</button>
+    <button class="ghost" id="btnSound">Sound: on</button>
+    <button class="ghost" id="btnQuit">Quit to main menu</button>
+  </div>
+
+  <div class="screen hidden" id="scr-results">
+    <div id="resultsBody"></div>
+    <div class="row"><button id="btnAgain">Race again</button><button class="ghost" id="btnMenu">Main menu</button></div>
+  </div>
+</div>
+<div id="err"></div>
+
+<script>
+  window.addEventListener('error', e => { document.getElementById('err').textContent += (e.message || e) + '\n'; });
+  window.addEventListener('unhandledrejection', e => { document.getElementById('err').textContent += e.reason + '\n'; });
+</script>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

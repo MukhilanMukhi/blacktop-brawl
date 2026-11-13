@@ -1,0 +1,27 @@
+<!doctype html><meta charset="utf-8"><title>bike viewer</title>
+<style>html,body{margin:0;background:#222}canvas{display:block}</style>
+<script type="importmap">{ "imports": { "three": "../vendor/three.module.js", "three/addons/": "../vendor/addons/" } }</script>
+<canvas id="c"></canvas>
+<script type="module">
+// Dev tool: close-up of the four bike styles. ?view=side|rear|front
+import * as THREE from 'three';
+import { RGBELoader } from 'three/addons/loaders/RGBELoader.js';
+import { createBike } from '../src/bike.js';
+const q = new URLSearchParams(location.search), view = q.get('view') || 'side';
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+renderer.setSize(innerWidth, innerHeight); renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.6;
+renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+const scene = new THREE.Scene();
+const hdr = await new RGBELoader().loadAsync('../assets/sky/valley_4k.hdr'); hdr.mapping = THREE.EquirectangularReflectionMapping;
+scene.environment = hdr; scene.background = new THREE.Color(0x8fa0b0);
+const sun = new THREE.DirectionalLight(0xfff2e0, 2.6); sun.position.set(4, 8, 3); sun.castShadow = true; sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -6, right: 6, top: 6, bottom: -6 }); scene.add(sun);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40).rotateX(-Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x55585c, roughness: 0.9 })); ground.receiveShadow = true; scene.add(ground);
+const styles = ['sport', 'street', 'cruiser', 'moto'], cols = [[0xe8451a, 0x18181b, 0xf4f4f4], [0x1d4fd0, 0x1d2f55, 0xf0f0f0], [0x1c1c1f, 0x3b2f1c, 0xc9a227], [0x0e9c79, 0x10231e, 0x0e9c79]];
+styles.forEach((st, i) => { const b = createBike(...cols[i], null, st); b.root.position.x = (i - 1.5) * (view === 'side' ? 0 : 1.5); b.root.position.z = view === 'side' ? (i - 1.5) * 2.6 : 0; scene.add(b.root); });
+const cam = new THREE.PerspectiveCamera(view === 'side' ? 16.5 : 26, innerWidth / innerHeight, 0.1, 100);
+if (view === 'side') { cam.position.set(-13, 1.6, 0); cam.lookAt(0, 0.8, 0); }
+else if (view === 'rear') { cam.position.set(-2.6, 2.4, -7.2); cam.lookAt(0, 0.8, 0.2); }
+else { cam.position.set(2.4, 1.7, 6.0); cam.lookAt(0, 0.8, 0); }
+renderer.render(scene, cam); window.__done = true;
+</script>

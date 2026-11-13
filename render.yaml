@@ -1,0 +1,12 @@
+# Render blueprint: one free web service that serves the game and runs the multiplayer server.
+services:
+  - type: web
+    name: blacktop-brawl
+    runtime: node
+    plan: free
+    buildCommand: npm ci --omit=dev
+    startCommand: node server.js
+    healthCheckPath: /
+    envVars:
+      - key: NODE_VERSION
+        value: "22"

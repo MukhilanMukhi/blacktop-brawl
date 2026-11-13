@@ -1,0 +1,30 @@
+<!doctype html><meta charset="utf-8"><title>bake</title>
+<style>html,body{margin:0;background:transparent}</style>
+<script type="importmap">{ "imports": { "three": "../vendor/three.module.js", "three/addons/": "../vendor/addons/" } }</script>
+<canvas id="c"></canvas>
+<script type="module">
+// Renders a tree model to a transparent side-view image (billboard impostor). Dev tool only.
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+const q = new URLSearchParams(location.search), model = q.get("model"), SIZE = +q.get("size") || 4096;
+document.getElementById("c").width = document.getElementById("c").height = SIZE;
+const renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), alpha: true, antialias: true, preserveDrawingBuffer: true });
+renderer.setClearColor(0x000000, 0);
+const scene = new THREE.Scene();
+scene.add(new THREE.HemisphereLight(0xffffff, 0x8a8f7a, 2.4));
+const sun = new THREE.DirectionalLight(0xffffff, 1.2); sun.position.set(0.3, 1, 0.5); scene.add(sun);
+new GLTFLoader().load(`./_dl/${model}/${model}.gltf`, g => {
+  const root = g.scene; scene.add(root);
+  root.traverse(o => { if (o.isMesh) { o.material.side = THREE.DoubleSide; if (o.material.transparent) { o.material.transparent = false; o.material.alphaTest = 0.4; } } });
+  const box = new THREE.Box3().setFromObject(root), size = box.getSize(new THREE.Vector3()), c = box.getCenter(new THREE.Vector3());
+  const half = Math.max(size.y, Math.hypot(size.x, size.z)) / 2 * 1.02;
+  const cam = new THREE.OrthographicCamera(-half, half, half, -half, 0.01, half * 10);
+  window.__meta = { height: size.y, half, baseY: (box.min.y - (c.y - half)) / (2 * half) };
+  window.__shot = yaw => {
+    cam.position.set(c.x + Math.sin(yaw) * half * 4, c.y, c.z + Math.cos(yaw) * half * 4); cam.lookAt(c);
+    renderer.render(scene, cam);
+    return renderer.domElement.toDataURL('image/png');
+  };
+  window.__done = true;
+}, undefined, e => { window.__err = String(e); });
+</script>
